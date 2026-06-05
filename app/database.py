@@ -58,6 +58,55 @@ def init_db():
             is_pinned INTEGER DEFAULT 0,
             created_at TEXT DEFAULT (datetime('now', 'localtime'))
         );
+
+        CREATE TABLE IF NOT EXISTS departments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL UNIQUE,
+            manager TEXT NOT NULL,
+            phone TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now', 'localtime')),
+            updated_at TEXT DEFAULT (datetime('now', 'localtime'))
+        );
+
+        CREATE TABLE IF NOT EXISTS petitions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            type TEXT NOT NULL CHECK(type IN ('投诉举报', '意见建议', '求助咨询', '信息公开申请')),
+            target TEXT NOT NULL,
+            content TEXT NOT NULL,
+            demand TEXT,
+            contact TEXT,
+            is_anonymous INTEGER DEFAULT 0,
+            status TEXT NOT NULL DEFAULT '待签收' CHECK(status IN (
+                '待签收', '待分派', '办理中', '待审核', '已办结', '退回重办', '复查中', '复查完结'
+            )),
+            department_id INTEGER,
+            deadline TEXT,
+            process_result TEXT,
+            review_opinion TEXT,
+            review_result TEXT,
+            created_at TEXT DEFAULT (datetime('now', 'localtime')),
+            updated_at TEXT DEFAULT (datetime('now', 'localtime')),
+            FOREIGN KEY (department_id) REFERENCES departments(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS petition_urges (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            petition_id INTEGER NOT NULL,
+            reason TEXT NOT NULL,
+            operator TEXT NOT NULL,
+            created_at TEXT DEFAULT (datetime('now', 'localtime')),
+            FOREIGN KEY (petition_id) REFERENCES petitions(id)
+        );
+
+        CREATE TABLE IF NOT EXISTS petition_flow_records (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            petition_id INTEGER NOT NULL,
+            action TEXT NOT NULL,
+            operator TEXT,
+            remark TEXT,
+            created_at TEXT DEFAULT (datetime('now', 'localtime')),
+            FOREIGN KEY (petition_id) REFERENCES petitions(id)
+        );
     """)
 
     conn.commit()
