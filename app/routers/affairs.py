@@ -28,6 +28,7 @@ def list_affairs(
     status: Optional[AffairStatus] = None,
     category: Optional[str] = None,
     applicant_id: Optional[int] = None,
+    department_id: Optional[int] = None,
     page: int = Query(1, ge=1),
     size: int = Query(20, ge=1, le=100)
 ):
@@ -43,6 +44,9 @@ def list_affairs(
     if applicant_id:
         conditions.append("a.applicant_id = ?")
         params.append(applicant_id)
+    if department_id:
+        conditions.append("a.department_id = ?")
+        params.append(department_id)
 
     where_clause = " WHERE " + " AND ".join(conditions) if conditions else ""
 
@@ -52,9 +56,10 @@ def list_affairs(
     total = cursor.fetchone()["total"]
 
     offset = (page - 1) * size
-    query_sql = f"""SELECT a.*, r.name as applicant_name
+    query_sql = f"""SELECT a.*, r.name as applicant_name, d.name as department_name
                     FROM affairs a
                     LEFT JOIN residents r ON a.applicant_id = r.id
+                    LEFT JOIN departments d ON a.department_id = d.id
                     {where_clause}
                     ORDER BY a.created_at DESC LIMIT ? OFFSET ?"""
     cursor.execute(query_sql, params + [size, offset])
@@ -73,9 +78,11 @@ def get_affair(affair_id: int):
     conn = get_connection()
     cursor = conn.cursor()
     cursor.execute(
-        """SELECT a.*, r.name as applicant_name, r.phone as applicant_phone
+        """SELECT a.*, r.name as applicant_name, r.phone as applicant_phone,
+           d.name as department_name, d.manager as department_manager, d.phone as department_phone
            FROM affairs a
            LEFT JOIN residents r ON a.applicant_id = r.id
+           LEFT JOIN departments d ON a.department_id = d.id
            WHERE a.id = ?""",
         (affair_id,)
     )
@@ -110,10 +117,15 @@ def process_affair(affair_id: int, data: AffairProcess):
             detail=f"状态不允许从'{current_status}'转换到'{new_status}'"
         )
 
+    if data.department_id is not None:
+        cursor.execute("SELECT id FROM departments WHERE id = ?", (data.department_id,))
+        if not cursor.fetchone():
+            raise HTTPException(status_code=404, detail="承办部门不存在")
+
     cursor.execute(
-        """UPDATE affairs SET status = ?, handler = ?, result = ?,
-           updated_at = datetime('now', 'localtime') WHERE id = ?""",
-        (new_status, data.handler, data.result, affair_id)
+        """UPDATE affairs SET status = ?, department_id = COALESCE(?, department_id),
+           handler = ?, result = ?, updated_at = datetime('now', 'localtime') WHERE id = ?""",
+        (new_status, data.department_id, data.handler, data.result, affair_id)
     )
     conn.commit()
     return {"message": "事务处理成功", "status": new_status}

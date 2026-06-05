@@ -65,7 +65,31 @@ def get_department(department_id: int):
     row = cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="部门不存在")
-    return dict(row)
+    
+    result = dict(row)
+    
+    cursor.execute(
+        """SELECT a.*, r.name as applicant_name
+           FROM affairs a
+           LEFT JOIN residents r ON a.applicant_id = r.id
+           WHERE a.department_id = ?
+           ORDER BY a.created_at DESC LIMIT 50""",
+        (department_id,)
+    )
+    affairs = cursor.fetchall()
+    result["affairs"] = [dict(a) for a in affairs]
+    
+    cursor.execute(
+        """SELECT p.*
+           FROM petitions p
+           WHERE p.department_id = ?
+           ORDER BY p.created_at DESC LIMIT 50""",
+        (department_id,)
+    )
+    petitions = cursor.fetchall()
+    result["petitions"] = [dict(p) for p in petitions]
+    
+    return result
 
 
 @router.put("/{department_id}")

@@ -59,6 +59,7 @@ class AffairCreate(BaseModel):
 
 class AffairProcess(BaseModel):
     status: AffairStatus
+    department_id: Optional[int] = None
     handler: str
     result: Optional[str] = None
 

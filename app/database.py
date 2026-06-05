@@ -16,6 +16,20 @@ def get_connection():
     return _conn
 
 
+def migrate_db():
+    conn = get_connection()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("PRAGMA table_info(affairs)")
+        columns = [col[1] for col in cursor.fetchall()]
+        if 'department_id' not in columns:
+            cursor.execute("ALTER TABLE affairs ADD COLUMN department_id INTEGER REFERENCES departments(id)")
+            conn.commit()
+    except:
+        pass
+
+
 def init_db():
     conn = get_connection()
     cursor = conn.cursor()
@@ -42,11 +56,13 @@ def init_db():
             applicant_id INTEGER NOT NULL,
             description TEXT,
             status TEXT NOT NULL DEFAULT '待受理' CHECK(status IN ('待受理', '办理中', '已办结', '已退回')),
+            department_id INTEGER,
             handler TEXT,
             result TEXT,
             created_at TEXT DEFAULT (datetime('now', 'localtime')),
             updated_at TEXT DEFAULT (datetime('now', 'localtime')),
-            FOREIGN KEY (applicant_id) REFERENCES residents(id)
+            FOREIGN KEY (applicant_id) REFERENCES residents(id),
+            FOREIGN KEY (department_id) REFERENCES departments(id)
         );
 
         CREATE TABLE IF NOT EXISTS announcements (

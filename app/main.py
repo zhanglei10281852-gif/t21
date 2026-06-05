@@ -1,12 +1,13 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
-from app.database import init_db
+from app.database import init_db, migrate_db
 from app.routers import residents, affairs, announcements, departments, petitions
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     init_db()
+    migrate_db()
     yield
 
 

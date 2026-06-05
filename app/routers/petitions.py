@@ -353,8 +353,8 @@ def statistics_by_department():
     cursor.execute(
         """SELECT d.id, d.name,
            COUNT(p.id) as total,
-           SUM(CASE WHEN p.status = '已办结' THEN 1 ELSE 0 END) as completed,
-           AVG(CASE WHEN p.status = '已办结' THEN
+           SUM(CASE WHEN p.status IN ('已办结', '复查完结') THEN 1 ELSE 0 END) as completed,
+           AVG(CASE WHEN p.status IN ('已办结', '复查完结') THEN
                julianday(p.updated_at) - julianday(p.created_at) ELSE NULL END) as avg_days
            FROM departments d
            LEFT JOIN petitions p ON d.id = p.department_id
